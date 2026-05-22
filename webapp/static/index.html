@@ -1,224 +1,953 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Intizom AI</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; min-height: 100vh; }
-    .card { transition: transform 0.1s ease; }
-    .card:active { transform: scale(0.985); }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .fade-up { animation: fadeUp 0.35s ease forwards; opacity: 0; }
-    @keyframes shimmer {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.45; }
-    }
-    .shimmer { animation: shimmer 1.4s infinite; }
-    .progress-bar { transition: width 0.6s cubic-bezier(.4,0,.2,1); }
-    button { cursor: pointer; border: none; outline: none; font-family: inherit; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Intizom AI</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;transition:background 0.3s,color 0.3s}
+button{cursor:pointer;border:none;outline:none;font-family:inherit}
+input,textarea{font-family:inherit;outline:none}
+:root{
+  --bg:#08080e;--surface:#111118;--card:#181825;--border:rgba(255,255,255,0.08);
+  --text:#f1f1f8;--sub:#7878a0;--accent:#818cf8;--accent2:#6366f1;
+  --success:#22c55e;--warning:#f59e0b;--danger:#f87171;
+  --gradient:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);
+  --nav-bg:rgba(10,10,20,0.92);--bg-alt:#1a1a2a;--accentBg:rgba(129,140,248,0.12);
+  --successBg:rgba(34,197,94,0.12);--accentGlow:rgba(129,140,248,0.35);
+}
+body.light{
+  --bg:#f4f4fd;--surface:#ffffff;--card:#ffffff;--border:rgba(0,0,0,0.08);
+  --text:#111127;--sub:#6b7280;--accent:#6366f1;--accent2:#4f46e5;
+  --success:#16a34a;--warning:#d97706;--danger:#dc2626;
+  --gradient:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);
+  --nav-bg:rgba(255,255,255,0.92);--bg-alt:#f0f0fa;--accentBg:rgba(99,102,241,0.10);
+  --successBg:rgba(22,163,74,0.10);--accentGlow:rgba(99,102,241,0.30);
+}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);color:var(--text)}
+#page{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}
+#page::-webkit-scrollbar{display:none}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--nav-bg);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-top:1px solid var(--border);height:72px;
+  display:flex;align-items:center;justify-content:space-around;padding:0 8px}
+.nav-btn{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;background:transparent;color:var(--sub);
+  font-size:10px;font-weight:400;letter-spacing:0.2px;transition:color 0.25s}
+.nav-btn.active{color:var(--accent);font-weight:600}
+.nav-btn svg{transition:stroke-width 0.2s}
+.nav-ai{position:relative;bottom:22px;width:60px;height:60px;border-radius:50%;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 0 0 4px rgba(139,92,246,0.2),0 0 20px rgba(139,92,246,0.45),0 4px 16px rgba(0,0,0,0.3)}
+.nav-ai .pulse{position:absolute;inset:-4px;border-radius:50%;
+  border:2px solid rgba(139,92,246,0.5);animation:pulse 2.5s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:0.4}50%{transform:scale(1.5);opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-up{animation:fadeUp 0.3s ease forwards}
+.card{background:var(--card);border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,0.12)}
+.sticky-header{background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50;backdrop-filter:blur(20px)}
+.fab{position:fixed;bottom:88px;right:18px;width:54px;height:54px;border-radius:50%;
+  background:var(--gradient);border:none;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px var(--accentGlow),0 2px 8px rgba(0,0,0,0.25);z-index:90;
+  cursor:pointer;transition:transform 0.15s}
+.fab:active{transform:scale(0.88)}
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);
+  display:flex;align-items:flex-end;animation:fadeUp 0.2s ease}
+.modal-sheet{width:100%;background:var(--surface);border-radius:24px 24px 0 0;
+  padding:24px 20px 40px;animation:slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+.inp{width:100%;padding:12px 14px;border-radius:14px;background:var(--bg-alt);
+  border:1px solid var(--border);color:var(--text);font-size:15px;transition:border-color 0.2s}
+.inp:focus{border-color:var(--accent)}
+.btn-primary{width:100%;padding:14px;border-radius:16px;background:var(--gradient);
+  color:#fff;font-size:15px;font-weight:700;transition:opacity 0.2s,transform 0.15s}
+.btn-primary:active{transform:scale(0.96)}
+.btn-primary:disabled{opacity:0.4;cursor:default}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;
+  font-size:12px;font-weight:600}
+.pill{padding:8px 16px;border-radius:99px;font-size:13px;font-weight:600;
+  background:var(--card);color:var(--sub);border:none;transition:all 0.2s;cursor:pointer}
+.pill.active{background:var(--accent);color:#fff;box-shadow:0 2px 10px var(--accentGlow)}
+.toggle-track{width:46px;height:26px;border-radius:13px;background:var(--bg-alt);
+  position:relative;cursor:pointer;transition:background 0.25s;flex-shrink:0}
+.toggle-track.on{background:var(--accent)}
+.toggle-thumb{position:absolute;top:3px;left:2px;width:20px;height:20px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);transition:transform 0.25s}
+.toggle-track.on .toggle-thumb{transform:translateX(20px)}
+.section-title{font-size:13px;font-weight:700;color:var(--sub);text-transform:uppercase;
+  letter-spacing:0.07em;margin-bottom:12px}
+.stat-card{background:var(--card);border-radius:18px;padding:16px 14px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.12)}
+.heatmap-cell{width:14px;height:14px;border-radius:4px;flex-shrink:0}
+.settings-row{display:flex;align-items:center;gap:14px;padding:14px 16px;
+  border-bottom:1px solid var(--border);cursor:pointer}
+.settings-row:last-child{border-bottom:none}
+.settings-icon{width:36px;height:36px;border-radius:12px;background:var(--accentBg);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chevron{color:var(--sub)}
+.empty-state{text-align:center;padding:52px 20px}
+.chip-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.chip-row::-webkit-scrollbar{display:none}
+.chip{padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:600;
+  white-space:nowrap;flex-shrink:0;cursor:pointer;border:none;transition:all 0.2s;font-family:inherit}
+</style>
 </head>
 <body>
-<div id="root"></div>
+<div id="app">
+  <div id="page"></div>
+  <nav class="nav" id="nav"></nav>
+</div>
+
 <script>
-(function () {
-  const tg = window.Telegram && window.Telegram.WebApp;
-  if (tg) { tg.ready(); tg.expand(); }
+(function(){
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+const tg = window.Telegram && window.Telegram.WebApp;
+if(tg){tg.ready();tg.expand();}
+const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+const telegramId = tgUser ? tgUser.id : null;
+const tgName = tgUser ? (tgUser.first_name + (tgUser.last_name?' '+tgUser.last_name:'')) : 'Demo Foydalanuvchi';
 
-  const dark = !tg || tg.colorScheme !== 'light';
-  const C = {
-    bg:      dark ? '#0f0f0f' : '#f2f2f7',
-    header:  dark ? '#1c1c1e' : '#ffffff',
-    card:    dark ? '#1c1c1e' : '#ffffff',
-    text:    dark ? '#ffffff' : '#111111',
-    sub:     dark ? '#8e8e93' : '#6b7280',
-    divider: dark ? '#2c2c2e' : '#e5e7eb',
-    subtle:  dark ? '#2c2c2e' : '#f3f4f6',
-  };
-  document.body.style.cssText = `background:${C.bg};color:${C.text}`;
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let state = {
+  page: 'home',
+  isDark: true,
+  tasks: [],
+  goals: [],
+  user: { full_name: tgName, username: tgUser?.username||'', streak:3, total_score:45 },
+  taskModal: null, // null | 'new' | task object
+  goalModal: null,
+  goalTab: 'yearly',
+  goalPeriod: getCurrentPeriod('yearly'),
+  taskFilter: 'all',
+  notifs: true,
+};
 
-  const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-  const telegramId = tgUser ? tgUser.id : null;
-  const tgName = tgUser ? (tgUser.first_name || 'Foydalanuvchi') : 'Demo';
-
-  const STATUS = {
-    done:    { icon:'✅', label:'Bajarildi',    color:'#22c55e', bg:'rgba(34,197,94,.13)',   border:'#22c55e' },
-    failed:  { icon:'❌', label:'Bajarilmadi',  color:'#ef4444', bg:'rgba(239,68,68,.13)',   border:'#ef4444' },
-    pending: { icon:'⏳', label:'Kutilmoqda',   color:'#3b82f6', bg:'rgba(59,130,246,.13)', border:'#3b82f6' },
-  };
-  const DAYS   = ['Yak','Dush','Sesh','Chor','Pay','Juma','Shan'];
-  const MONTHS = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
-
-  function fmtDate(d) {
-    const fullDays = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
-    return fullDays[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+// Load from localStorage
+try {
+  const saved = localStorage.getItem('intizom_state_v2');
+  if(saved) {
+    const p = JSON.parse(saved);
+    state.isDark = p.isDark ?? true;
+    state.tasks = p.tasks || [];
+    state.goals = p.goals || [];
+    state.user = p.user || state.user;
+    state.notifs = p.notifs ?? true;
   }
+} catch(e){}
 
-  // ── Skeleton ──────────────────────────────────────────
-  function skeletonCard() {
-    return `<div class="shimmer" style="background:${C.card};border-radius:16px;border-left:4px solid ${C.subtle};padding:14px 16px;margin-bottom:12px">
-      <div style="display:flex;gap:10px">
-        <div style="width:20px;height:20px;border-radius:50%;background:${C.subtle}"></div>
-        <div style="flex:1">
-          <div style="height:14px;width:65%;background:${C.subtle};border-radius:6px;margin-bottom:8px"></div>
-          <div style="height:12px;width:38%;background:${C.subtle};border-radius:6px"></div>
+if(!state.tasks.length){
+  const today = new Date().toISOString().split('T')[0];
+  state.tasks = [
+    {id:'t1',title:"Soat 6 da turish",description:"",status:"done",score_value:5,plan_date:today,scheduled_time:"06:00",createdAt:new Date().toISOString()},
+    {id:'t2',title:"Sport mashg'uloti",description:"30 daqiqa yugurish",status:"done",score_value:5,plan_date:today,scheduled_time:"07:30",createdAt:new Date().toISOString()},
+    {id:'t3',title:"Kitob o'qish",description:"",status:"pending",score_value:5,plan_date:today,scheduled_time:"10:00",createdAt:new Date().toISOString()},
+    {id:'t4',title:"Python loyiha",description:"",status:"pending",score_value:5,plan_date:today,scheduled_time:"14:00",createdAt:new Date().toISOString()},
+    {id:'t5',title:"Ingliz tili",description:"Vocabulary takrorlash",status:"failed",score_value:5,plan_date:today,scheduled_time:"17:00",createdAt:new Date().toISOString()},
+  ];
+}
+
+function saveState(){
+  try{
+    localStorage.setItem('intizom_state_v2', JSON.stringify({
+      isDark:state.isDark, tasks:state.tasks, goals:state.goals,
+      user:state.user, notifs:state.notifs
+    }));
+  }catch(e){}
+}
+
+function applyTheme(){
+  document.body.classList.toggle('light', !state.isDark);
+}
+applyTheme();
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+const MONTHS_UZ = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
+const MONTHS_SHORT = ["Yan","Fev","Mar","Apr","May","Iyu","Iyu","Avg","Sen","Okt","Noy","Dek"];
+const WEEKDAYS = ["Du","Se","Ch","Pa","Ju","Sh","Ya"];
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function fmtDate(d){
+  const days=['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
+  return days[d.getDay()]+', '+d.getDate()+' '+MONTHS_UZ[d.getMonth()];
+}
+
+function getCurrentPeriod(type){
+  const now = new Date();
+  if(type==='yearly') return String(now.getFullYear());
+  if(type==='monthly') return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  if(type==='weekly'){
+    const week = Math.ceil(((+now - +new Date(now.getFullYear(),0,1))/86400000+1)/7);
+    return now.getFullYear()+'-W'+week;
+  }
+  return now.toISOString().split('T')[0];
+}
+
+function getPeriodLabel(type, period){
+  if(type==='yearly') return period;
+  if(type==='monthly'){const[y,m]=period.split('-');return MONTHS_UZ[+m-1]+' '+y;}
+  if(type==='weekly'){const[y,w]=period.split('-W');return y+' — '+w+'-hafta';}
+  const d=new Date(period);return d.getDate()+' '+MONTHS_UZ[d.getMonth()]+' '+d.getFullYear();
+}
+
+function getLevelInfo(score){
+  if(score>=500) return {level:'Legenda',emoji:'👑',next:null};
+  if(score>=200) return {level:'Master',emoji:'💎',next:500};
+  if(score>=100) return {level:'Pro',emoji:'🥇',next:200};
+  if(score>=50)  return {level:"O'rta",emoji:'🥈',next:100};
+  return              {level:'Yangi',emoji:'🌱',next:50};
+}
+
+function svgIcon(name, size=20, strokeWidth=1.8){
+  const icons = {
+    home:`<polyline points="3 9 12 2 21 9"/><path d="M9 22V12h6v10"/>`,
+    target:`<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>`,
+    sparkles:`<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3z"/>`,
+    barchart:`<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>`,
+    user:`<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
+    plus:`<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>`,
+    check:`<polyline points="20 6 9 11 4 13"/>`,
+    x:`<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>`,
+    edit:`<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>`,
+    trash:`<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>`,
+    trophy:`<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>`,
+    flame:`<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>`,
+    star:`<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`,
+    checkcircle:`<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`,
+    sun:`<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`,
+    moon:`<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`,
+    bell:`<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`,
+    globe:`<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>`,
+    shield:`<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>`,
+    logout:`<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>`,
+    chevronright:`<polyline points="9 18 15 12 9 6"/>`,
+    trendingup:`<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>`,
+    award:`<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>`,
+    zap:`<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>`,
+  };
+  const d = icons[name]||'';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+}
+
+// ═══════════════════════════════════════════
+// RENDER ENGINE
+// ═══════════════════════════════════════════
+function render(){
+  applyTheme();
+  renderNav();
+  const page = document.getElementById('page');
+  page.innerHTML = '';
+  page.scrollTop = 0;
+  if(state.page==='home') renderHome(page);
+  else if(state.page==='goals') renderGoals(page);
+  else if(state.page==='ai') renderAI(page);
+  else if(state.page==='stats') renderStats(page);
+  else if(state.page==='profile') renderProfile(page);
+  if(state.taskModal !== null) renderTaskModal();
+  if(state.goalModal !== null) renderGoalModal();
+}
+
+function renderNav(){
+  const nav = document.getElementById('nav');
+  const tabs = [
+    {id:'home',icon:'home',label:'Asosiy'},
+    {id:'goals',icon:'target',label:'Maqsadlar'},
+    {id:'ai',icon:'sparkles',label:'AI Chat'},
+    {id:'stats',icon:'barchart',label:'Statistika'},
+    {id:'profile',icon:'user',label:'Profil'},
+  ];
+  nav.innerHTML = tabs.map(t => {
+    if(t.id==='ai'){
+      return `<button class="nav-ai" onclick="navigate('ai')">
+        ${svgIcon('sparkles',24,2)}
+        <div class="pulse"></div>
+      </button>`;
+    }
+    const active = state.page === t.id;
+    return `<button class="nav-btn ${active?'active':''}" onclick="navigate('${t.id}')">
+      ${svgIcon(t.icon, 21, active?2.5:1.8)}
+      <span>${t.label}</span>
+    </button>`;
+  }).join('');
+}
+
+window.navigate = function(page){
+  state.page = page;
+  state.taskModal = null;
+  state.goalModal = null;
+  render();
+};
+
+// ═══════════════════════════════════════════
+// HOME PAGE
+// ═══════════════════════════════════════════
+function renderHome(el){
+  const today = new Date().toISOString().split('T')[0];
+  const todayTasks = state.tasks.filter(t => t.plan_date === today);
+  const done = todayTasks.filter(t=>t.status==='done').length;
+  const total = todayTasks.length;
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  const r = 40, circ = 2*Math.PI*r;
+  const offset = circ - (pct/100)*circ;
+
+  const filters = [
+    {id:'all',label:'Barchasi'},
+    {id:'pending',label:'Kutilmoqda'},
+    {id:'done',label:'Bajarildi'},
+    {id:'failed',label:'Bajarilmadi'},
+  ];
+
+  const filtered = state.taskFilter==='all' ? todayTasks : todayTasks.filter(t=>t.status===state.taskFilter);
+
+  const statusMap = {
+    done:{icon:'✅',color:'var(--success)',bg:'var(--successBg)',label:'Bajarildi'},
+    failed:{icon:'❌',color:'var(--danger)',bg:'rgba(248,113,113,0.12)',label:'Bajarilmadi'},
+    pending:{icon:'⏳',color:'var(--accent)',bg:'var(--accentBg)',label:'Kutilmoqda'},
+  };
+
+  el.innerHTML = `
+    <div class="sticky-header" style="padding:20px 18px 14px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <h1 style="font-size:22px;font-weight:800;color:var(--text)">Bugun 📋</h1>
+          <p style="font-size:13.5px;color:var(--sub);margin-top:2px">${fmtDate(new Date())}</p>
         </div>
+        <div style="display:flex;align-items:center;justify-content:center;width:90px;height:90px;position:relative">
+          <svg width="90" height="90" style="transform:rotate(-90deg);position:absolute">
+            <circle cx="45" cy="45" r="${r}" fill="none" stroke="var(--bg-alt)" stroke-width="7"/>
+            <circle cx="45" cy="45" r="${r}" fill="none" stroke="var(--accent)" stroke-width="7"
+              stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+              stroke-linecap="round" style="transition:stroke-dashoffset 0.8s ease"/>
+          </svg>
+          <div style="text-align:center;z-index:1">
+            <p style="font-size:18px;font-weight:800;color:var(--text);line-height:1">${pct}%</p>
+            <p style="font-size:10px;color:var(--sub)">bajarildi</p>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${[
+          {icon:'flame',val:state.user.streak||0,label:'Zanjir',c:'rgba(249,115,22,0.15)',ic:'#f97316'},
+          {icon:'star',val:state.user.total_score||0,label:'Ball',c:'rgba(245,158,11,0.15)',ic:'#f59e0b'},
+          {icon:'checkcircle',val:done,label:'Bajarildi',c:'var(--successBg)',ic:'var(--success)'},
+        ].map(s=>`
+          <div style="flex:1;background:var(--card);border-radius:14px;padding:10px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,0.1)">
+            <div style="width:30px;height:30px;border-radius:10px;background:${s.c};display:flex;align-items:center;justify-content:center;margin:0 auto 6px;color:${s.ic}">
+              ${svgIcon(s.icon,15,2)}
+            </div>
+            <p style="font-size:17px;font-weight:800;color:var(--text)">${s.val}</p>
+            <p style="font-size:10px;color:var(--sub);margin-top:2px">${s.label}</p>
+          </div>`).join('')}
+      </div>
+      <div class="chip-row" style="margin-top:12px">
+        ${filters.map(f=>`
+          <button class="chip ${state.taskFilter===f.id?'active':''}" onclick="setFilter('${f.id}')">${f.label}</button>
+        `).join('')}
+      </div>
+    </div>
+    <div style="padding:14px 16px 0">
+      ${filtered.length===0 ? `
+        <div class="empty-state fade-up">
+          ${svgIcon('checkcircle',52,1.2)}
+          <p style="font-size:17px;font-weight:700;color:var(--text);margin-top:14px;margin-bottom:6px">Vazifa yo'q</p>
+          <p style="font-size:14px;color:var(--sub)">Yangi vazifa qo'shing</p>
+        </div>` :
+        filtered.map((task,i)=>{
+          const s = statusMap[task.status]||statusMap.pending;
+          return `<div class="fade-up" style="margin-bottom:10px;animation-delay:${i*40}ms">
+            <div class="card" style="border-left:4px solid ${s.color}">
+              <div style="padding:13px 14px">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <span style="font-size:18px;flex-shrink:0;line-height:1.3">${s.icon}</span>
+                  <div style="flex:1;min-width:0">
+                    <p style="font-size:14.5px;font-weight:600;color:${task.status==='failed'?'var(--sub)':'var(--text)'};text-decoration:${task.status==='failed'?'line-through':'none'}">${task.title}</p>
+                    ${task.description?`<p style="font-size:12.5px;color:var(--sub);margin-top:3px">${task.description}</p>`:''}
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:7px">
+                      ${task.scheduled_time?`<span style="font-size:12px;color:var(--sub)">🕐 ${task.scheduled_time}</span>`:''}
+                      <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${s.bg};color:${s.color}">${s.label}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+                    <button onclick="cycleTaskStatus('${task.id}')" style="width:32px;height:32px;border-radius:10px;background:var(--accentBg);display:flex;align-items:center;justify-content:center;color:var(--accent)">
+                      ${svgIcon('check',14,2.5)}
+                    </button>
+                    <button onclick="editTask('${task.id}')" style="width:32px;height:32px;border-radius:10px;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;color:var(--sub)">
+                      ${svgIcon('edit',13,2)}
+                    </button>
+                    <button onclick="deleteTask('${task.id}')" style="width:32px;height:32px;border-radius:10px;background:rgba(248,113,113,0.1);display:flex;align-items:center;justify-content:center;color:var(--danger)">
+                      ${svgIcon('trash',13,2)}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        }).join('')
+      }
+    </div>
+    <button class="fab" onclick="openTaskModal()">
+      ${svgIcon('plus',24,2.5)}
+    </button>
+  `;
+}
+
+window.setFilter = function(f){state.taskFilter=f;render();};
+window.cycleTaskStatus = function(id){
+  const order = {pending:'done',done:'failed',failed:'pending'};
+  state.tasks = state.tasks.map(t=>t.id===id?{...t,status:order[t.status]||'pending'}:t);
+  if(state.tasks.find(t=>t.id===id)?.status==='done') state.user.total_score=(state.user.total_score||0)+5;
+  saveState(); render();
+};
+window.editTask = function(id){state.taskModal=state.tasks.find(t=>t.id===id)||null;render();};
+window.deleteTask = function(id){state.tasks=state.tasks.filter(t=>t.id!==id);saveState();render();};
+window.openTaskModal = function(){state.taskModal='new';render();};
+
+function renderTaskModal(){
+  const editing = state.taskModal !== 'new' ? state.taskModal : null;
+  const today = new Date().toISOString().split('T')[0];
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `
+    <div class="modal-sheet">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <span style="font-size:18px;font-weight:700;color:var(--text)">${editing?'Vazifani tahrirlash':'Yangi vazifa'}</span>
+        <button onclick="closeTaskModal()" style="background:var(--bg-alt);border-radius:10px;padding:8px;color:var(--sub)">${svgIcon('x',18)}</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input class="inp" id="t-title" placeholder="Vazifa nomi *" value="${editing?editing.title:''}">
+        <input class="inp" id="t-desc" placeholder="Izoh (ixtiyoriy)" value="${editing?editing.description||'':''}">
+        <input class="inp" id="t-time" type="time" value="${editing?editing.scheduled_time||'':''}">
+        <input class="inp" id="t-date" type="date" value="${editing?editing.plan_date:today}">
+        <select class="inp" id="t-status" style="appearance:auto">
+          ${['pending','done','failed'].map(s=>`<option value="${s}" ${(editing?.status||'pending')===s?'selected':''}>${s==='pending'?"Kutilmoqda":s==='done'?"Bajarildi":"Bajarilmadi"}</option>`).join('')}
+        </select>
+        <button class="btn-primary" id="t-save" onclick="saveTask()">
+          ${editing?'Saqlash':"Qo'shish"}
+        </button>
       </div>
     </div>`;
+  ov.addEventListener('click', e=>{if(e.target===ov)closeTaskModal();});
+  document.getElementById('app').appendChild(ov);
+  document.getElementById('t-title').focus();
+}
+window.closeTaskModal = function(){state.taskModal=null;render();};
+window.saveTask = function(){
+  const title = document.getElementById('t-title').value.trim();
+  if(!title) return;
+  const desc = document.getElementById('t-desc').value.trim();
+  const time = document.getElementById('t-time').value;
+  const date = document.getElementById('t-date').value;
+  const status = document.getElementById('t-status').value;
+  if(state.taskModal && state.taskModal !== 'new'){
+    state.tasks = state.tasks.map(t=>t.id===state.taskModal.id?{...t,title,description:desc,scheduled_time:time,plan_date:date,status}:t);
+  } else {
+    state.tasks.push({id:uid(),title,description:desc,scheduled_time:time,plan_date:date,status,score_value:5,createdAt:new Date().toISOString()});
   }
+  saveState();
+  state.taskModal = null;
+  render();
+};
 
-  function renderSkeleton() {
-    const r = document.getElementById('root');
-    r.innerHTML = `
-      <div style="background:${C.header};border-bottom:1px solid ${C.divider};padding:20px 16px 16px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
-          <div>
-            <div class="shimmer" style="height:22px;width:110px;background:${C.subtle};border-radius:8px;margin-bottom:6px"></div>
-            <div class="shimmer" style="height:13px;width:75px;background:${C.subtle};border-radius:6px"></div>
-          </div>
-          <div class="shimmer" style="width:40px;height:40px;border-radius:50%;background:${C.subtle}"></div>
-        </div>
-        <div style="display:flex;gap:8px">
-          ${[1,2,3].map(()=>`<div class="shimmer" style="flex:1;height:54px;background:${C.subtle};border-radius:14px"></div>`).join('')}
-        </div>
+// ═══════════════════════════════════════════
+// GOALS PAGE
+// ═══════════════════════════════════════════
+const GOAL_TABS = [
+  {key:'yearly',label:'Yillik',emoji:'🏆'},
+  {key:'monthly',label:'Oylik',emoji:'📅'},
+  {key:'weekly',label:'Haftalik',emoji:'📆'},
+  {key:'daily',label:'Kunlik',emoji:'☀️'},
+];
+
+function getPeriodOptions(type){
+  const y = new Date().getFullYear();
+  if(type==='yearly') return [y-1,y,y+1,y+2].map(String);
+  if(type==='monthly') return Array.from({length:12},(_,i)=>y+'-'+String(i+1).padStart(2,'0'));
+  if(type==='weekly') return Array.from({length:52},(_,i)=>y+'-W'+(i+1));
+  const now=new Date();const days=[];
+  for(let i=-7;i<=30;i++){const d=new Date(now);d.setDate(now.getDate()+i);days.push(d.toISOString().split('T')[0]);}
+  return days;
+}
+
+function renderGoals(el){
+  const tab = state.goalTab;
+  const period = state.goalPeriod;
+  const filtered = state.goals.filter(g=>g.type===tab&&g.period===period);
+  const done = filtered.filter(g=>g.completed).length;
+  const pct = filtered.length>0?Math.round((done/filtered.length)*100):0;
+  const periods = getPeriodOptions(tab);
+
+  el.innerHTML = `
+    <div class="sticky-header" style="padding:20px 18px 14px">
+      <h1 style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:2px">Maqsadlar 🎯</h1>
+      <p style="font-size:13.5px;color:var(--sub)">Kelajakka rejalar qiling</p>
+      <div style="display:flex;gap:6px;margin-top:14px">
+        ${GOAL_TABS.map(t=>`
+          <button onclick="setGoalTab('${t.key}')" style="flex:1;padding:9px 0;border-radius:14px;border:none;
+            background:${tab===t.key?'var(--accent)':'var(--bg-alt)'};color:${tab===t.key?'#fff':'var(--sub)'};
+            font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.22s;
+            box-shadow:${tab===t.key?'0 2px 12px var(--accentGlow)':'none'}">
+            <div>${t.emoji}</div>
+            <div style="margin-top:2px">${t.label}</div>
+          </button>`).join('')}
       </div>
-      <div style="padding:16px">${skeletonCard().repeat(3)}</div>`;
-  }
-
-  // ── Plan card ─────────────────────────────────────────
-  function planCard(p, i) {
-    const s = STATUS[p.status] || STATUS.pending;
-    const strike = p.status === 'failed' ? `text-decoration:line-through;color:${C.sub}` : `color:${C.text}`;
-    return `
-      <div class="card fade-up" style="background:${C.card};border-radius:16px;border-left:4px solid ${s.border};margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.18);animation-delay:${i*55}ms">
-        <div style="padding:12px 14px 11px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-            <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0">
-              <span style="font-size:17px;flex-shrink:0;line-height:1.2">${s.icon}</span>
-              <p style="font-size:14.5px;font-weight:600;line-height:1.35;${strike}">${p.title}</p>
+    </div>
+    <div style="padding:16px 16px 0">
+      <div class="chip-row" style="margin-bottom:14px">
+        ${periods.map(p=>`
+          <button class="chip ${period===p?'active':''}" onclick="setGoalPeriod('${p}')">${getPeriodLabel(tab,p)}</button>
+        `).join('')}
+      </div>
+      ${filtered.length>0?`
+        <div class="card fade-up" style="padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:16px">
+          <div style="color:var(--warning)">${svgIcon('trophy',28,2)}</div>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:13px;color:var(--sub)">${done}/${filtered.length} bajarildi</span>
+              <span style="font-size:13px;font-weight:700;color:var(--success)">${pct}%</span>
             </div>
-            <span style="font-size:11px;background:${C.subtle};padding:2px 8px;border-radius:99px;flex-shrink:0;color:${C.sub};font-weight:600;white-space:nowrap">⭐ ${p.score_value}</span>
+            <div style="background:var(--bg-alt);border-radius:99px;height:7px;overflow:hidden">
+              <div style="background:linear-gradient(90deg,var(--success),#16a34a);height:100%;border-radius:99px;width:${pct}%;transition:width 0.8s ease"></div>
+            </div>
           </div>
-          ${p.description ? `<p style="font-size:12.5px;color:${C.sub};margin-top:5px;padding-left:26px;line-height:1.4">${p.description}</p>` : ''}
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-left:26px">
-            ${p.scheduled_time ? `<span style="font-size:12px;color:${C.sub};font-weight:500">🕐 ${p.scheduled_time}</span>` : '<span></span>'}
-            <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${s.bg};color:${s.color}">${s.label}</span>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  // ── Full page ─────────────────────────────────────────
-  function renderPage(user, plans) {
-    const done    = plans.filter(p => p.status === 'done').length;
-    const failed  = plans.filter(p => p.status === 'failed').length;
-    const pending = plans.filter(p => p.status === 'pending').length;
-    const total   = plans.length;
-    const pct     = total > 0 ? Math.round((done / total) * 100) : 0;
-    const name    = (user.full_name || tgName);
-    const first   = name.split(' ')[0];
-    const initial = name.charAt(0).toUpperCase();
-
-    const statsHtml = [
-      { emoji:'🔥', val: user.streak,      label:'kunlik zanjir', c:'rgba(249,115,22,.18)' },
-      { emoji:'⭐', val: user.total_score, label:'umumiy ball',    c:'rgba(245,158,11,.18)' },
-      { emoji:'📋', val: total,            label:'bugungi reja',   c:'rgba(59,130,246,.18)' },
-    ].map(b => `
-      <div style="background:${b.c};border-radius:14px;padding:9px 11px;flex:1">
-        <div style="font-size:17px;font-weight:700;color:${C.text}">${b.emoji} ${b.val}</div>
-        <div style="font-size:11px;color:${C.sub};margin-top:1px">${b.label}</div>
-      </div>`).join('');
-
-    const progressHtml = `
-      <div style="background:${C.card};border-radius:16px;padding:13px 15px;margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:7px">
-          <span style="font-size:13px;color:${C.sub}">${done}/${total} bajarildi</span>
-          <span style="font-size:13px;font-weight:700;color:#22c55e">${pct}%</span>
-        </div>
-        <div style="background:${C.subtle};border-radius:99px;height:7px;overflow:hidden">
-          <div class="progress-bar" style="background:linear-gradient(90deg,#22c55e,#16a34a);height:7px;border-radius:99px;width:${pct}%"></div>
-        </div>
-        <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">
-          <span style="font-size:12px;color:${C.sub}">✅ ${done} bajarildi</span>
-          <span style="font-size:12px;color:${C.sub}">⏳ ${pending} kutilmoqda</span>
-          <span style="font-size:12px;color:${C.sub}">❌ ${failed} bajarilmadi</span>
-        </div>
-      </div>`;
-
-    const plansHtml = total === 0
-      ? `<div style="text-align:center;padding:70px 20px 40px">
-           <div style="font-size:52px">📭</div>
-           <p style="font-size:17px;font-weight:600;margin-top:14px;color:${C.text}">Bugun reja yo'q</p>
-           <p style="font-size:13.5px;margin-top:6px;color:${C.sub}">Botga yozing — reja qo'shamiz!</p>
-         </div>`
-      : progressHtml
-        + `<p style="font-size:11.5px;font-weight:600;color:${C.sub};text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px">Bugungi rejalar</p>`
-        + plans.map((p, i) => planCard(p, i)).join('');
-
-    document.getElementById('root').innerHTML = `
-      <div style="background:${C.header};border-bottom:1px solid ${C.divider};padding:20px 16px 16px;position:sticky;top:0;z-index:10">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-          <div>
-            <h1 style="font-size:21px;font-weight:700;color:${C.text};line-height:1.2">Intizom AI</h1>
-            <p style="font-size:13px;color:${C.sub};margin-top:2px">${fmtDate(new Date())}</p>
-          </div>
-          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0">${initial}</div>
-        </div>
-        <p style="font-size:15px;font-weight:500;color:${C.text};margin-bottom:11px">Salom, ${first}! 👋</p>
-        <div style="display:flex;gap:7px">${statsHtml}</div>
-      </div>
-      <div style="padding:14px 14px 32px">${plansHtml}</div>`;
-  }
-
-  // ── Error screen ──────────────────────────────────────
-  function renderError(msg) {
-    document.getElementById('root').innerHTML = `
-      <div style="text-align:center;padding:90px 24px 40px">
-        <div style="font-size:50px">⚠️</div>
-        <p style="font-size:16px;font-weight:600;margin-top:14px;color:${C.text}">Ma'lumot yuklanmadi</p>
-        <p style="font-size:13px;margin-top:6px;color:${C.sub};word-break:break-word">${msg}</p>
-        <button onclick="location.reload()" style="margin-top:22px;padding:11px 28px;background:#3b82f6;color:#fff;border-radius:14px;font-size:14px;font-weight:600">Qayta urinish</button>
-      </div>`;
-  }
-
-  // ── Main ──────────────────────────────────────────────
-  const DEMO = {
-    user: { full_name: tgName, streak: 3, total_score: 45 },
-    plans: [
-      { id:1, title:"Soat 6 da turish",        scheduled_time:"06:00", status:"done",    score_value:5 },
-      { id:2, title:"Sport mashg'uloti",        description:"30 daqiqa yugurish", scheduled_time:"07:30", status:"done",    score_value:5 },
-      { id:3, title:"Kitob o'qish",             scheduled_time:"10:00", status:"pending", score_value:5 },
-      { id:4, title:"Python loyiha",            scheduled_time:"14:00", status:"pending", score_value:5 },
-      { id:5, title:"Ingliz tili",              description:"Vocabulary takrorlash", scheduled_time:"17:00", status:"failed",  score_value:5 },
-    ]
-  };
-
-  async function load() {
-    renderSkeleton();
-    if (!telegramId) {
-      setTimeout(() => renderPage(DEMO.user, DEMO.plans), 600);
-      return;
-    }
-    try {
-      const res = await fetch('/api/webapp/plans?telegram_id=' + telegramId);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Server xatosi' }));
-        throw new Error(err.detail || 'Server xatosi');
+        </div>` : ''}
+      ${filtered.length===0?`
+        <div class="empty-state fade-up" style="color:var(--sub)">
+          ${svgIcon('target',52,1.2)}
+          <p style="font-size:17px;font-weight:700;color:var(--text);margin-top:14px;margin-bottom:6px">Maqsad qo'shing</p>
+          <p style="font-size:14px;color:var(--sub)">${getPeriodLabel(tab,period)} uchun maqsad belgilang</p>
+        </div>` :
+        filtered.map((g,i)=>`
+          <div class="fade-up" style="margin-bottom:9px;animation-delay:${i*40}ms">
+            <div class="card" style="border-left:4px solid ${g.completed?'var(--success)':'var(--accent)'}">
+              <div style="padding:13px 14px">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <button onclick="toggleGoal('${g.id}')" style="width:24px;height:24px;border-radius:8px;
+                    border:2px solid ${g.completed?'var(--success)':'var(--border)'};
+                    background:${g.completed?'var(--success)':'transparent'};
+                    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                    margin-top:1px;transition:all 0.2s;color:#fff">
+                    ${g.completed?svgIcon('check',13,3):''}
+                  </button>
+                  <div style="flex:1;min-width:0">
+                    <p style="font-size:14.5px;font-weight:600;color:${g.completed?'var(--sub)':'var(--text)'};
+                      text-decoration:${g.completed?'line-through':'none'}">${g.title}</p>
+                    ${g.description?`<p style="font-size:12.5px;color:var(--sub);margin-top:3px">${g.description}</p>`:''}
+                  </div>
+                  <div style="display:flex;gap:6px;flex-shrink:0">
+                    <button onclick="editGoal('${g.id}')" style="width:30px;height:30px;border-radius:9px;background:var(--accentBg);display:flex;align-items:center;justify-content:center;color:var(--accent)">${svgIcon('edit',13,2)}</button>
+                    <button onclick="deleteGoal('${g.id}')" style="width:30px;height:30px;border-radius:9px;background:rgba(248,113,113,0.1);display:flex;align-items:center;justify-content:center;color:var(--danger)">${svgIcon('trash',13,2)}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>`).join('')
       }
-      const data = await res.json();
-      renderPage(data.user, data.plans);
-    } catch (e) {
-      renderError(e.message);
-    }
-  }
+    </div>
+    <button class="fab" onclick="openGoalModal()">
+      ${svgIcon('plus',24,2.5)}
+    </button>`;
 
-  load();
+  // Scroll period chips to active
+  setTimeout(()=>{
+    const row = el.querySelector('.chip-row');
+    const active = row && row.querySelector('.chip.active');
+    if(active) active.scrollIntoView({inline:'center',behavior:'smooth'});
+  }, 50);
+}
+
+window.setGoalTab = function(t){state.goalTab=t;state.goalPeriod=getCurrentPeriod(t);render();};
+window.setGoalPeriod = function(p){state.goalPeriod=p;render();};
+window.toggleGoal = function(id){state.goals=state.goals.map(g=>g.id===id?{...g,completed:!g.completed}:g);saveState();render();};
+window.editGoal = function(id){state.goalModal=state.goals.find(g=>g.id===id)||null;render();};
+window.deleteGoal = function(id){state.goals=state.goals.filter(g=>g.id!==id);saveState();render();};
+window.openGoalModal = function(){state.goalModal='new';render();};
+
+function renderGoalModal(){
+  const editing = state.goalModal !== 'new' ? state.goalModal : null;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `
+    <div class="modal-sheet">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <span style="font-size:18px;font-weight:700;color:var(--text)">${editing?'Maqsadni tahrirlash':'Yangi maqsad'}</span>
+        <button onclick="closeGoalModal()" style="background:var(--bg-alt);border-radius:10px;padding:8px;color:var(--sub)">${svgIcon('x',18)}</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input class="inp" id="g-title" placeholder="Maqsad nomi *" value="${editing?editing.title:''}">
+        <input class="inp" id="g-desc" placeholder="Izoh (ixtiyoriy)" value="${editing?editing.description||'':''}">
+        <button class="btn-primary" onclick="saveGoal()">${editing?'Saqlash':"Qo'shish"}</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click', e=>{if(e.target===ov)closeGoalModal();});
+  document.getElementById('app').appendChild(ov);
+  document.getElementById('g-title').focus();
+}
+window.closeGoalModal = function(){state.goalModal=null;render();};
+window.saveGoal = function(){
+  const title = document.getElementById('g-title').value.trim();
+  if(!title) return;
+  const desc = document.getElementById('g-desc').value.trim();
+  if(state.goalModal && state.goalModal !== 'new'){
+    state.goals = state.goals.map(g=>g.id===state.goalModal.id?{...g,title,description:desc}:g);
+  } else {
+    state.goals.push({id:uid(),title,description:desc,type:state.goalTab,period:state.goalPeriod,completed:false,createdAt:new Date().toISOString()});
+  }
+  saveState();
+  state.goalModal = null;
+  render();
+};
+
+// ═══════════════════════════════════════════
+// AI CHAT PAGE
+// ═══════════════════════════════════════════
+function renderAI(el){
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 72px);padding:32px 24px;text-align:center">
+      <div style="position:relative;margin-bottom:32px">
+        <div style="width:110px;height:110px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(139,92,246,0.4)">
+          ${svgIcon('sparkles',44,1.5)}
+        </div>
+        <div style="position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(139,92,246,0.3);animation:pulse 2.5s infinite"></div>
+        <div style="position:absolute;inset:-18px;border-radius:50%;border:2px solid rgba(139,92,246,0.15);animation:pulse 2.5s infinite 0.8s"></div>
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:99px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);margin-bottom:20px">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite"></div>
+        <span style="font-size:12.5px;font-weight:600;color:var(--success)">Tez orada...</span>
+      </div>
+      <h2 style="font-size:26px;font-weight:800;color:var(--text);margin-bottom:12px">AI Yordamchi</h2>
+      <p style="font-size:15px;color:var(--sub);line-height:1.6;max-width:300px;margin-bottom:32px">
+        Shaxsiy AI yordamchingiz tez orada tayyorlanadi. U sizga maqsad qo'yish va rejalashtrishda yordam beradi.
+      </p>
+      <div style="width:100%;max-width:340px">
+        ${[
+          {icon:'zap',text:"Vazifa tahlili va maslahat"},
+          {icon:'trendingup',text:"Unumdorlik hisoboti"},
+          {icon:'award',text:"Shaxsiy rivojlanish rejalari"},
+        ].map(f=>`
+          <div class="card" style="display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:10px">
+            <div style="width:38px;height:38px;border-radius:12px;background:var(--accentBg);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0">
+              ${svgIcon(f.icon,18,2)}
+            </div>
+            <span style="font-size:14px;color:var(--text);font-weight:500">${f.text}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// STATS PAGE
+// ═══════════════════════════════════════════
+function renderStats(el){
+  const now = new Date();
+  const totalDone = state.tasks.filter(t=>t.status==='done').length;
+  const totalFailed = state.tasks.filter(t=>t.status==='failed').length;
+  const activeGoals = state.goals.filter(g=>!g.completed).length;
+
+  const weeklyData = Array.from({length:7},(_,i)=>{
+    const d = new Date(now); d.setDate(now.getDate()-6+i);
+    const ds = d.toISOString().split('T')[0];
+    const day = state.tasks.filter(t=>t.plan_date===ds);
+    return {day:WEEKDAYS[(d.getDay()+6)%7],done:day.filter(t=>t.status==='done').length,failed:day.filter(t=>t.status==='failed').length};
+  });
+
+  const heatmap = [];
+  for(let i=69;i>=0;i--){
+    const d=new Date(now);d.setDate(now.getDate()-i);
+    const ds=d.toISOString().split('T')[0];
+    const cnt = state.tasks.filter(t=>t.plan_date===ds&&t.status==='done').length;
+    heatmap.push(cnt||(Math.random()<0.35?Math.floor(Math.random()*5):0));
+  }
+  const maxH = Math.max(...heatmap,1);
+
+  const achievements = [
+    {icon:'🔥',title:'Streak ustasi',desc:`${state.user.streak||0} kunlik`,earned:(state.user.streak||0)>=3,color:'#f97316'},
+    {icon:'⭐',title:"Ball to'plovchi",desc:`${state.user.total_score||0} ball`,earned:(state.user.total_score||0)>=50,color:'#f59e0b'},
+    {icon:'✅',title:'Vazifa bajaruvchi',desc:`${totalDone} vazifa`,earned:totalDone>=5,color:'#22c55e'},
+    {icon:'🎯',title:'Maqsad belgilovchi',desc:`${state.goals.length} maqsad`,earned:state.goals.length>=3,color:'#818cf8'},
+    {icon:'💪',title:'Muntazam',desc:'7 kun ketma-ket',earned:(state.user.streak||0)>=7,color:'#ec4899'},
+    {icon:'🏆',title:'Chempion',desc:'100+ ball',earned:(state.user.total_score||0)>=100,color:'#fbbf24'},
+  ];
+
+  el.innerHTML = `
+    <div class="sticky-header" style="padding:20px 18px 16px">
+      <h1 style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:2px">Statistika 📊</h1>
+      <p style="font-size:13.5px;color:var(--sub)">Unumdorligingizni kuzating</p>
+    </div>
+    <div style="padding:16px 16px 0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        ${[
+          {icon:'flame',val:state.user.streak||0,label:'Kunlik zanjir',c:'rgba(249,115,22,0.15)',ic:'#f97316'},
+          {icon:'star',val:state.user.total_score||0,label:'Umumiy ball',c:'rgba(245,158,11,0.15)',ic:'#f59e0b'},
+          {icon:'checkcircle',val:totalDone,label:'Bajarilgan',c:'var(--successBg)',ic:'var(--success)'},
+          {icon:'target',val:activeGoals,label:'Faol maqsad',c:'var(--accentBg)',ic:'var(--accent)'},
+        ].map(s=>`
+          <div class="stat-card fade-up">
+            <div style="width:38px;height:38px;border-radius:12px;background:${s.c};display:flex;align-items:center;justify-content:center;margin-bottom:10px;color:${s.ic}">
+              ${svgIcon(s.icon,18,2)}
+            </div>
+            <p style="font-size:22px;font-weight:800;color:var(--text);line-height:1">${s.val}</p>
+            <p style="font-size:12px;color:var(--sub);margin-top:4px">${s.label}</p>
+          </div>`).join('')}
+      </div>
+
+      <div class="card" style="padding:18px 16px;margin-bottom:16px">
+        <p class="section-title">Haftalik bajarilish</p>
+        <canvas id="weekChart" height="140"></canvas>
+        <div style="display:flex;gap:16px;margin-top:8px;justify-content:center">
+          <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub)">
+            <div style="width:10px;height:10px;border-radius:3px;background:var(--accent)"></div>Bajarildi
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub)">
+            <div style="width:10px;height:10px;border-radius:3px;background:var(--danger)"></div>Bajarilmadi
+          </span>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px 16px;margin-bottom:16px">
+        <p class="section-title">Faollik xaritasi</p>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${heatmap.map(c=>{
+            const intens = c/maxH;
+            const bg = c===0?'var(--bg-alt)':intens<0.25?'rgba(129,140,248,0.25)':intens<0.5?'rgba(129,140,248,0.5)':intens<0.75?'rgba(129,140,248,0.75)':'var(--accent)';
+            return `<div class="heatmap-cell" style="background:${bg}"></div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;justify-content:flex-end">
+          <span style="font-size:11px;color:var(--sub)">Kam</span>
+          ${[0,0.25,0.5,0.75,1].map(v=>`<div style="width:11px;height:11px;border-radius:3px;background:${v===0?'var(--bg-alt)':`rgba(129,140,248,${0.25+v*0.75})`}"></div>`).join('')}
+          <span style="font-size:11px;color:var(--sub)">Ko'p</span>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px 16px;margin-bottom:16px">
+        <p class="section-title">Yutuqlar</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${achievements.map(a=>`
+            <div style="border-radius:14px;padding:12px;background:${a.earned?a.color+'15':'var(--bg-alt)'};
+              border:1.5px solid ${a.earned?a.color+'40':'var(--border)'};opacity:${a.earned?1:0.5}">
+              <div style="font-size:24px;margin-bottom:6px">${a.icon}</div>
+              <p style="font-size:12.5px;font-weight:700;color:${a.earned?'var(--text)':'var(--sub)'}">${a.title}</p>
+              <p style="font-size:11px;color:var(--sub);margin-top:2px">${a.desc}</p>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px 16px;margin-bottom:20px">
+        <p class="section-title">Umumiy natijalar</p>
+        ${[
+          {label:'Bajarilgan vazifalar',val:totalDone,icon:'✅',color:'var(--success)'},
+          {label:'Bajarilmagan vazifalar',val:totalFailed,icon:'❌',color:'var(--danger)'},
+          {label:'Barcha maqsadlar',val:state.goals.length,icon:'🎯',color:'var(--accent)'},
+          {label:'Bajarilgan maqsadlar',val:state.goals.filter(g=>g.completed).length,icon:'🏆',color:'var(--warning)'},
+        ].map((s,i,arr)=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:${i<arr.length-1?'1px solid var(--border)':'none'}">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px">${s.icon}</span>
+              <span style="font-size:14px;color:var(--text)">${s.label}</span>
+            </div>
+            <span style="font-size:16px;font-weight:800;color:${s.color}">${s.val}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  // Render chart after DOM update
+  setTimeout(()=>{
+    const canvas = document.getElementById('weekChart');
+    if(!canvas || !window.Chart) return;
+    const isDark = state.isDark;
+    new Chart(canvas, {
+      type:'bar',
+      data:{
+        labels:weeklyData.map(d=>d.day),
+        datasets:[
+          {label:'Bajarildi',data:weeklyData.map(d=>d.done),backgroundColor:isDark?'rgba(129,140,248,0.85)':'rgba(99,102,241,0.85)',borderRadius:6,borderSkipped:false},
+          {label:'Bajarilmadi',data:weeklyData.map(d=>d.failed),backgroundColor:'rgba(248,113,113,0.75)',borderRadius:6,borderSkipped:false},
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:isDark?'#181825':'#fff',titleColor:isDark?'#7878a0':'#6b7280',bodyColor:isDark?'#f1f1f8':'#111',borderColor:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)',borderWidth:1}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:isDark?'#7878a0':'#6b7280',font:{size:11}}},
+          y:{display:false,grid:{display:false}},
+        },
+        barPercentage:0.65,categoryPercentage:0.8,
+      }
+    });
+  }, 50);
+}
+
+// ═══════════════════════════════════════════
+// PROFILE PAGE
+// ═══════════════════════════════════════════
+function renderProfile(el){
+  const score = state.user.total_score || 0;
+  const level = getLevelInfo(score);
+  const pct = level.next ? Math.min(100, Math.round((score/level.next)*100)) : 100;
+  const totalDone = state.tasks.filter(t=>t.status==='done').length;
+  const completedGoals = state.goals.filter(g=>g.completed).length;
+  const name = state.user.full_name || 'Foydalanuvchi';
+  const initial = name.charAt(0).toUpperCase();
+
+  const QUOTES = [
+    "Har bir bajarilgan vazifa — kelajakka qo'yilgan qadam.",
+    "Intizom — ozodlikning shakllaridan biri.",
+    "Bugungi harakat — ertangi natija.",
+    "Kichik qadamlar katta maqsadlarga olib boradi.",
+  ];
+  const quote = QUOTES[new Date().getDay()%QUOTES.length];
+
+  el.innerHTML = `
+    <div style="background:var(--gradient);padding:28px 20px 32px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,0.06)"></div>
+      <div style="position:absolute;bottom:-20px;left:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.06)"></div>
+      <div style="display:flex;align-items:center;gap:16px;position:relative">
+        <div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.2);flex-shrink:0">
+          ${initial}
+        </div>
+        <div>
+          <h1 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:2px">${name}</h1>
+          ${state.user.username?`<p style="font-size:13.5px;color:rgba(255,255,255,0.75)">@${state.user.username}</p>`:''}
+          <div style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.15)">
+            <span style="font-size:14px">${level.emoji}</span>
+            <span style="font-size:12px;font-weight:700;color:#fff">${level.level}</span>
+          </div>
+        </div>
+      </div>
+      ${level.next?`
+        <div style="margin-top:20px;position:relative">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:12px;color:rgba(255,255,255,0.75)">Keyingi daraja: ${score}/${level.next} ball</span>
+            <span style="font-size:12px;font-weight:700;color:#fff">${pct}%</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.2);border-radius:99px;height:6px;overflow:hidden">
+            <div style="background:#fff;height:100%;border-radius:99px;width:${pct}%;transition:width 1s ease"></div>
+          </div>
+        </div>`:''}
+    </div>
+    <div style="padding:16px 16px 0">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+        ${[
+          {icon:'flame',val:state.user.streak||0,label:'Zanjir',c:'rgba(249,115,22,0.15)',ic:'#f97316'},
+          {icon:'star',val:score,label:'Ball',c:'rgba(245,158,11,0.15)',ic:'#f59e0b'},
+          {icon:'target',val:completedGoals,label:'Maqsad',c:'var(--accentBg)',ic:'var(--accent)'},
+        ].map(s=>`
+          <div class="card" style="padding:14px 10px;text-align:center">
+            <div style="width:36px;height:36px;border-radius:12px;background:${s.c};display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:${s.ic}">
+              ${svgIcon(s.icon,17,2)}
+            </div>
+            <p style="font-size:20px;font-weight:800;color:var(--text)">${s.val}</p>
+            <p style="font-size:11px;color:var(--sub);margin-top:2px">${s.label}</p>
+          </div>`).join('')}
+      </div>
+
+      <div class="card" style="padding:14px 16px;margin-bottom:20px">
+        <p style="font-size:13px;color:var(--accent);font-style:italic;line-height:1.6;text-align:center">"${quote}"</p>
+      </div>
+
+      <p style="font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;padding-left:4px">Faollik</p>
+      <div class="card" style="overflow:hidden;margin-bottom:20px">
+        ${[
+          {label:"Qo'shilgan sana",val:'2026-yil Yanvar'},
+          {label:'Bajarilgan vazifalar',val:`${totalDone} ta`},
+          {label:'Jami maqsadlar',val:`${state.goals.length} ta`},
+          {label:'Bajarilgan maqsadlar',val:`${completedGoals} ta`},
+        ].map((r,i,arr)=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:${i<arr.length-1?'1px solid var(--border)':'none'}">
+            <span style="font-size:14.5px;color:var(--text)">${r.label}</span>
+            <span style="font-size:14px;font-weight:600;color:var(--accent)">${r.val}</span>
+          </div>`).join('')}
+      </div>
+
+      <p style="font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;padding-left:4px">Sozlamalar</p>
+      <div class="card" style="overflow:hidden;margin-bottom:20px">
+        <div class="settings-row" onclick="toggleTheme()">
+          <div class="settings-icon">${svgIcon(state.isDark?'sun':'moon',17,2)}</div>
+          <span style="flex:1;font-size:15px;color:var(--text);font-weight:500">Tungi rejim</span>
+          <div class="toggle-track ${state.isDark?'on':''}"><div class="toggle-thumb"></div></div>
+        </div>
+        <div class="settings-row" onclick="toggleNotifs()">
+          <div class="settings-icon">${svgIcon('bell',17,2)}</div>
+          <span style="flex:1;font-size:15px;color:var(--text);font-weight:500">Bildirishnomalar</span>
+          <div class="toggle-track ${state.notifs?'on':''}"><div class="toggle-thumb"></div></div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">${svgIcon('globe',17,2)}</div>
+          <span style="flex:1;font-size:15px;color:var(--text);font-weight:500">Til</span>
+          <span style="font-size:13px;color:var(--sub)">O'zbekcha</span>
+          ${svgIcon('chevronright',16)}
+        </div>
+        <div class="settings-row">
+          <div class="settings-icon">${svgIcon('shield',17,2)}</div>
+          <span style="flex:1;font-size:15px;color:var(--text);font-weight:500">Maxfiylik siyosati</span>
+          ${svgIcon('chevronright',16)}
+        </div>
+      </div>
+
+      <p style="font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;padding-left:4px">Boshqaruv</p>
+      <div class="card" style="overflow:hidden;margin-bottom:20px">
+        <div class="settings-row">
+          <div style="width:36px;height:36px;border-radius:12px;background:rgba(248,113,113,0.13);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--danger)">
+            ${svgIcon('logout',17,2)}
+          </div>
+          <span style="flex:1;font-size:15px;color:var(--danger);font-weight:500">Chiqish</span>
+        </div>
+      </div>
+
+      <p style="text-align:center;font-size:12px;color:var(--sub);padding-bottom:8px">Intizom AI v2.0 · Made with ❤️</p>
+    </div>`;
+}
+
+window.toggleTheme = function(){state.isDark=!state.isDark;saveState();render();};
+window.toggleNotifs = function(){state.notifs=!state.notifs;saveState();render();};
+
+// ═══════════════════════════════════════════
+// API FETCH (with fallback)
+// ═══════════════════════════════════════════
+async function loadFromAPI(){
+  if(!telegramId) return;
+  try{
+    const res = await fetch('/api/webapp/plans?telegram_id='+telegramId);
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data.user){
+      state.user.full_name = data.user.full_name||state.user.full_name;
+      state.user.streak = data.user.streak||state.user.streak;
+      state.user.total_score = data.user.total_score||state.user.total_score;
+    }
+    if(data.plans && data.plans.length){
+      const today = new Date().toISOString().split('T')[0];
+      const apiTasks = data.plans.map(p=>({
+        id:'api_'+p.id, title:p.title, description:p.description||'',
+        status:p.status, score_value:p.score_value||5,
+        plan_date:today, scheduled_time:p.scheduled_time||'',
+        createdAt:new Date().toISOString(), _fromApi:true
+      }));
+      state.tasks = [...apiTasks, ...state.tasks.filter(t=>!t._fromApi)];
+    }
+    saveState();
+    render();
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════
+render();
+loadFromAPI();
+
 })();
 </script>
 </body>
