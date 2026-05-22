@@ -1,11 +1,16 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from webapp.routes import plans
 
 logger = logging.getLogger(__name__)
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 async def run_bot():
@@ -46,9 +51,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# API routes
 app.include_router(plans.router, prefix="/api/webapp")
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+# Mini App frontend — barcha boshqa yo'llar uchun index.html
+@app.get("/")
+async def root():
+    return FileResponse(STATIC_DIR / "index.html")

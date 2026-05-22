@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Intizom AI</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; min-height: 100vh; }
+    .card { transition: transform 0.1s ease; }
+    .card:active { transform: scale(0.985); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.35s ease forwards; opacity: 0; }
+    @keyframes shimmer {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.45; }
+    }
+    .shimmer { animation: shimmer 1.4s infinite; }
+    .progress-bar { transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+    button { cursor: pointer; border: none; outline: none; font-family: inherit; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+
+  const dark = !tg || tg.colorScheme !== 'light';
+  const C = {
+    bg:      dark ? '#0f0f0f' : '#f2f2f7',
+    header:  dark ? '#1c1c1e' : '#ffffff',
+    card:    dark ? '#1c1c1e' : '#ffffff',
+    text:    dark ? '#ffffff' : '#111111',
+    sub:     dark ? '#8e8e93' : '#6b7280',
+    divider: dark ? '#2c2c2e' : '#e5e7eb',
+    subtle:  dark ? '#2c2c2e' : '#f3f4f6',
+  };
+  document.body.style.cssText = `background:${C.bg};color:${C.text}`;
+
+  const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+  const telegramId = tgUser ? tgUser.id : null;
+  const tgName = tgUser ? (tgUser.first_name || 'Foydalanuvchi') : 'Demo';
+
+  const STATUS = {
+    done:    { icon:'✅', label:'Bajarildi',    color:'#22c55e', bg:'rgba(34,197,94,.13)',   border:'#22c55e' },
+    failed:  { icon:'❌', label:'Bajarilmadi',  color:'#ef4444', bg:'rgba(239,68,68,.13)',   border:'#ef4444' },
+    pending: { icon:'⏳', label:'Kutilmoqda',   color:'#3b82f6', bg:'rgba(59,130,246,.13)', border:'#3b82f6' },
+  };
+  const DAYS   = ['Yak','Dush','Sesh','Chor','Pay','Juma','Shan'];
+  const MONTHS = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+
+  function fmtDate(d) {
+    const fullDays = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
+    return fullDays[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+  }
+
+  // ── Skeleton ──────────────────────────────────────────
+  function skeletonCard() {
+    return `<div class="shimmer" style="background:${C.card};border-radius:16px;border-left:4px solid ${C.subtle};padding:14px 16px;margin-bottom:12px">
+      <div style="display:flex;gap:10px">
+        <div style="width:20px;height:20px;border-radius:50%;background:${C.subtle}"></div>
+        <div style="flex:1">
+          <div style="height:14px;width:65%;background:${C.subtle};border-radius:6px;margin-bottom:8px"></div>
+          <div style="height:12px;width:38%;background:${C.subtle};border-radius:6px"></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderSkeleton() {
+    const r = document.getElementById('root');
+    r.innerHTML = `
+      <div style="background:${C.header};border-bottom:1px solid ${C.divider};padding:20px 16px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+          <div>
+            <div class="shimmer" style="height:22px;width:110px;background:${C.subtle};border-radius:8px;margin-bottom:6px"></div>
+            <div class="shimmer" style="height:13px;width:75px;background:${C.subtle};border-radius:6px"></div>
+          </div>
+          <div class="shimmer" style="width:40px;height:40px;border-radius:50%;background:${C.subtle}"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${[1,2,3].map(()=>`<div class="shimmer" style="flex:1;height:54px;background:${C.subtle};border-radius:14px"></div>`).join('')}
+        </div>
+      </div>
+      <div style="padding:16px">${skeletonCard().repeat(3)}</div>`;
+  }
+
+  // ── Plan card ─────────────────────────────────────────
+  function planCard(p, i) {
+    const s = STATUS[p.status] || STATUS.pending;
+    const strike = p.status === 'failed' ? `text-decoration:line-through;color:${C.sub}` : `color:${C.text}`;
+    return `
+      <div class="card fade-up" style="background:${C.card};border-radius:16px;border-left:4px solid ${s.border};margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.18);animation-delay:${i*55}ms">
+        <div style="padding:12px 14px 11px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0">
+              <span style="font-size:17px;flex-shrink:0;line-height:1.2">${s.icon}</span>
+              <p style="font-size:14.5px;font-weight:600;line-height:1.35;${strike}">${p.title}</p>
+            </div>
+            <span style="font-size:11px;background:${C.subtle};padding:2px 8px;border-radius:99px;flex-shrink:0;color:${C.sub};font-weight:600;white-space:nowrap">⭐ ${p.score_value}</span>
+          </div>
+          ${p.description ? `<p style="font-size:12.5px;color:${C.sub};margin-top:5px;padding-left:26px;line-height:1.4">${p.description}</p>` : ''}
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-left:26px">
+            ${p.scheduled_time ? `<span style="font-size:12px;color:${C.sub};font-weight:500">🕐 ${p.scheduled_time}</span>` : '<span></span>'}
+            <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${s.bg};color:${s.color}">${s.label}</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── Full page ─────────────────────────────────────────
+  function renderPage(user, plans) {
+    const done    = plans.filter(p => p.status === 'done').length;
+    const failed  = plans.filter(p => p.status === 'failed').length;
+    const pending = plans.filter(p => p.status === 'pending').length;
+    const total   = plans.length;
+    const pct     = total > 0 ? Math.round((done / total) * 100) : 0;
+    const name    = (user.full_name || tgName);
+    const first   = name.split(' ')[0];
+    const initial = name.charAt(0).toUpperCase();
+
+    const statsHtml = [
+      { emoji:'🔥', val: user.streak,      label:'kunlik zanjir', c:'rgba(249,115,22,.18)' },
+      { emoji:'⭐', val: user.total_score, label:'umumiy ball',    c:'rgba(245,158,11,.18)' },
+      { emoji:'📋', val: total,            label:'bugungi reja',   c:'rgba(59,130,246,.18)' },
+    ].map(b => `
+      <div style="background:${b.c};border-radius:14px;padding:9px 11px;flex:1">
+        <div style="font-size:17px;font-weight:700;color:${C.text}">${b.emoji} ${b.val}</div>
+        <div style="font-size:11px;color:${C.sub};margin-top:1px">${b.label}</div>
+      </div>`).join('');
+
+    const progressHtml = `
+      <div style="background:${C.card};border-radius:16px;padding:13px 15px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px">
+          <span style="font-size:13px;color:${C.sub}">${done}/${total} bajarildi</span>
+          <span style="font-size:13px;font-weight:700;color:#22c55e">${pct}%</span>
+        </div>
+        <div style="background:${C.subtle};border-radius:99px;height:7px;overflow:hidden">
+          <div class="progress-bar" style="background:linear-gradient(90deg,#22c55e,#16a34a);height:7px;border-radius:99px;width:${pct}%"></div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">
+          <span style="font-size:12px;color:${C.sub}">✅ ${done} bajarildi</span>
+          <span style="font-size:12px;color:${C.sub}">⏳ ${pending} kutilmoqda</span>
+          <span style="font-size:12px;color:${C.sub}">❌ ${failed} bajarilmadi</span>
+        </div>
+      </div>`;
+
+    const plansHtml = total === 0
+      ? `<div style="text-align:center;padding:70px 20px 40px">
+           <div style="font-size:52px">📭</div>
+           <p style="font-size:17px;font-weight:600;margin-top:14px;color:${C.text}">Bugun reja yo'q</p>
+           <p style="font-size:13.5px;margin-top:6px;color:${C.sub}">Botga yozing — reja qo'shamiz!</p>
+         </div>`
+      : progressHtml
+        + `<p style="font-size:11.5px;font-weight:600;color:${C.sub};text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px">Bugungi rejalar</p>`
+        + plans.map((p, i) => planCard(p, i)).join('');
+
+    document.getElementById('root').innerHTML = `
+      <div style="background:${C.header};border-bottom:1px solid ${C.divider};padding:20px 16px 16px;position:sticky;top:0;z-index:10">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <h1 style="font-size:21px;font-weight:700;color:${C.text};line-height:1.2">Intizom AI</h1>
+            <p style="font-size:13px;color:${C.sub};margin-top:2px">${fmtDate(new Date())}</p>
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0">${initial}</div>
+        </div>
+        <p style="font-size:15px;font-weight:500;color:${C.text};margin-bottom:11px">Salom, ${first}! 👋</p>
+        <div style="display:flex;gap:7px">${statsHtml}</div>
+      </div>
+      <div style="padding:14px 14px 32px">${plansHtml}</div>`;
+  }
+
+  // ── Error screen ──────────────────────────────────────
+  function renderError(msg) {
+    document.getElementById('root').innerHTML = `
+      <div style="text-align:center;padding:90px 24px 40px">
+        <div style="font-size:50px">⚠️</div>
+        <p style="font-size:16px;font-weight:600;margin-top:14px;color:${C.text}">Ma'lumot yuklanmadi</p>
+        <p style="font-size:13px;margin-top:6px;color:${C.sub};word-break:break-word">${msg}</p>
+        <button onclick="location.reload()" style="margin-top:22px;padding:11px 28px;background:#3b82f6;color:#fff;border-radius:14px;font-size:14px;font-weight:600">Qayta urinish</button>
+      </div>`;
+  }
+
+  // ── Main ──────────────────────────────────────────────
+  const DEMO = {
+    user: { full_name: tgName, streak: 3, total_score: 45 },
+    plans: [
+      { id:1, title:"Soat 6 da turish",        scheduled_time:"06:00", status:"done",    score_value:5 },
+      { id:2, title:"Sport mashg'uloti",        description:"30 daqiqa yugurish", scheduled_time:"07:30", status:"done",    score_value:5 },
+      { id:3, title:"Kitob o'qish",             scheduled_time:"10:00", status:"pending", score_value:5 },
+      { id:4, title:"Python loyiha",            scheduled_time:"14:00", status:"pending", score_value:5 },
+      { id:5, title:"Ingliz tili",              description:"Vocabulary takrorlash", scheduled_time:"17:00", status:"failed",  score_value:5 },
+    ]
+  };
+
+  async function load() {
+    renderSkeleton();
+    if (!telegramId) {
+      setTimeout(() => renderPage(DEMO.user, DEMO.plans), 600);
+      return;
+    }
+    try {
+      const res = await fetch('/api/webapp/plans?telegram_id=' + telegramId);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Server xatosi' }));
+        throw new Error(err.detail || 'Server xatosi');
+      }
+      const data = await res.json();
+      renderPage(data.user, data.plans);
+    } catch (e) {
+      renderError(e.message);
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
