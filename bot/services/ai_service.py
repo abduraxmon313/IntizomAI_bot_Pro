@@ -43,7 +43,7 @@ async def extract_plans_from_text(text: str) -> list[dict]:
         now = datetime.now(TIMEZONE)
         current_time = now.strftime("%H:%M")
         current_date = now.strftime("%d.%m.%Y")
-        
+
         tomorrow = now + timedelta(days=1)
         tomorrow_date = tomorrow.strftime("%d.%m.%Y")
 
@@ -73,7 +73,7 @@ TAHLIL QOIDALARI:
 
 1. SONLAR VA MIQDORLAR:
    Agar son aytilgan bo'lsa — title ga qo'sh!
-   
+
    MISOLLAR:
    ✅ "10 ta turnik" → "Turnikda 10 ta tortish"
    ✅ "5 km yugurish" → "5 km yugurish"
@@ -86,13 +86,13 @@ TAHLIL QOIDALARI:
    - "17:00 da" → "17:00"
    - "soat 9 da" → "09:00"
    - "14:30 da" → "14:30"
-   
+
    Nisbiy vaqt (hozirgi vaqt: {current_time}):
    - "10 minutdan keyin" → "{(now + timedelta(minutes=10)).strftime("%H:%M")}"
    - "yarim soatdan so'ng" → "{(now + timedelta(minutes=30)).strftime("%H:%M")}"
    - "1 soatdan keyin" → "{(now + timedelta(hours=1)).strftime("%H:%M")}"
    - "2 soatdan so'ng" → "{(now + timedelta(hours=2)).strftime("%H:%M")}"
-   
+
    Vaqt yo'q:
    - "kechqurun" → null
    - "ertadan" → null
@@ -107,12 +107,12 @@ TAHLIL QOIDALARI:
    - "yugurish", "koşmak", "running" → "Yugurish"
    - "sport", "mashq" → "Sport mashg'uloti"
    - "fitnes", "gym" → "Fitnes mashg'uloti"
-   
+
    O'QUV:
    - "dars", "dars tayyorlash" → "Darsga tayyorgarlik"
    - "AI fanidan", "matematikadan" → "[Fan nomi] darsi"
    - "imtihon", "exam" → "Imtihonga tayyorgarlik"
-   
+
    KUNDALIK ISH:
    - "uyg'onish", "turish" → "Uyg'onish"
    - "nonushta", "breakfast" → "Nonushta"
@@ -123,12 +123,12 @@ TAHLIL QOIDALARI:
    - "kalkacağım" → "Uyg'onish"
    - "spor yapacağım" → "Sport qilish"
    - "kitap okuyacağım" → "Kitob o'qish"
-   
+
    Ruscha → O'zbekcha:
    - "проснуться" → "Uyg'onish"
    - "заниматься спортом" → "Sport qilish"
    - "читать книгу" → "Kitob o'qish"
-   
+
    Inglizcha → O'zbekcha:
    - "wake up" → "Uyg'onish"
    - "workout" → "Sport mashg'uloti"
@@ -191,7 +191,7 @@ FAQAT JSON QAYTAR, BOSHQA HECH NARSA YOZMA!"""
 
         data = json.loads(content)
         plans = data.get("plans", [])
-        
+
         # Kirill harflar → O'zbek
         for plan in plans:
             title = plan.get("title", "")
@@ -202,7 +202,8 @@ FAQAT JSON QAYTAR, BOSHQA HECH NARSA YOZMA!"""
                     model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": "Sen tarjimon. FAQAT o'zbek tilida lotin harflarida javob ber."},
-                        {"role": "user", "content": f"Bu matnni o'zbek tiliga (lotin harflarida) tarjima qil. Faqat tarjimani yoz, boshqa hech narsa: '{title}'"}
+                        {"role": "user",
+                         "content": f"Bu matnni o'zbek tiliga (lotin harflarida) tarjima qil. Faqat tarjimani yoz, boshqa hech narsa: '{title}'"}
                     ],
                     temperature=0.05,
                 )
@@ -222,3 +223,63 @@ FAQAT JSON QAYTAR, BOSHQA HECH NARSA YOZMA!"""
     except Exception as e:
         logger.error(f"❌ GPT xatosi: {type(e).__name__}: {str(e)}")
         raise e
+
+
+async def extract_time_only(text: str) -> str | None:
+    """Faqat vaqtni chiqaradi (HH:MM formatda yoki None)"""
+    try:
+        now = datetime.now(TIMEZONE)
+        current_time = now.strftime("%H:%M")
+
+        logger.info(f"⏰ Vaqt chiqarish: '{text}' | Hozir: {current_time}")
+
+        system_prompt = """Sen vaqt tahlilchi.
+
+VAZIFA: Foydalanuvchi berilgan matn yoki gapdan FAQAT VAQTNI chiqar.
+
+JAVOB: HH:MM formatda yoki 'null' (agar vaqt yo'q bo'lsa)"""
+
+        user_prompt = f"""Hozirgi vaqti: {current_time}
+
+Foydalanuvchi: "{text}"
+
+QOIDALAR:
+1. Aniq vaqt: "17:00" → 17:00
+2. "soat 9 da" → 09:00
+3. "10 minutdan keyin" → {(now + timedelta(minutes=10)).strftime('%H:%M')}
+4. "yarim soatdan so'ng" → {(now + timedelta(minutes=30)).strftime('%H:%M')}
+5. "1 soatdan keyin" → {(now + timedelta(hours=1)).strftime('%H:%M')}
+6. "2 soatdan so'ng" → {(now + timedelta(hours=2)).strftime('%H:%M')}
+7. Agar vaqt yo'q bo'lsa → null
+
+FAQAT VAQTNI JAVOB QIL, MASALAN: 17:30 yoki null"""
+
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.05,
+        )
+
+        result = response.choices[0].message.content.strip()
+        logger.info(f"✅ Extracted time: '{result}'")
+
+        # Vaqt formatini tekshirish (HH:MM)
+        if result and result != "null" and ":" in result:
+            parts = result.split(":")
+            if len(parts) == 2:
+                try:
+                    hour = int(parts[0])
+                    minute = int(parts[1])
+                    if 0 <= hour <= 23 and 0 <= minute <= 59:
+                        return f"{hour:02d}:{minute:02d}"
+                except ValueError:
+                    pass
+
+        return None
+
+    except Exception as e:
+        logger.error(f"❌ Vaqt chiqarish xatosi: {type(e).__name__}: {str(e)}")
+        return None
