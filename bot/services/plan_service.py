@@ -62,6 +62,99 @@ async def delete_plan(session: AsyncSession, plan: Plan):
     await session.commit()
 
 
+async def create_plan_single(
+    session: AsyncSession,
+    user: User,
+    title: str,
+    description: str | None,
+    scheduled_time: str | None,
+    plan_date_str: str | None,
+    score_value: int = 5,
+) -> Plan:
+    if plan_date_str:
+        try:
+            pd = date.fromisoformat(plan_date_str)
+        except Exception:
+            pd = datetime.now(TIMEZONE).date()
+    else:
+        pd = datetime.now(TIMEZONE).date()
+    plan = Plan(
+        user_id=user.id,
+        title=title,
+        description=description,
+        scheduled_time=scheduled_time,
+        plan_date=pd,
+        score_value=score_value,
+    )
+    session.add(plan)
+    await session.commit()
+    await session.refresh(plan)
+    return plan
+
+
+async def update_plan_fields(
+    session: AsyncSession,
+    plan_id: int,
+    user_id: int,
+    title: str | None = None,
+    description: str | None = None,
+    scheduled_time: str | None = None,
+    status: str | None = None,
+) -> Plan | None:
+    result = await session.execute(
+        select(Plan).where(and_(Plan.id == plan_id, Plan.user_id == user_id))
+    )
+    plan = result.scalar_one_or_none()
+    if not plan:
+        return None
+    if title is not None:
+        plan.title = title
+    if description is not None:
+        plan.description = description
+    if scheduled_time is not None:
+        plan.scheduled_time = scheduled_time
+    if status is not None:
+        try:
+            plan.status = PlanStatus(status)
+        except Exception:
+            pass
+    await session.commit()
+    await session.refresh(plan)
+    return plan
+
+
+async def delete_plan_by_id(session: AsyncSession, plan_id: int, user_id: int) -> bool:
+    result = await session.execute(
+        select(Plan).where(and_(Plan.id == plan_id, Plan.user_id == user_id))
+    )
+    plan = result.scalar_one_or_none()
+    if not plan:
+        return False
+    await session.delete(plan)
+    await session.commit()
+    return True
+
+
+async def get_plans_in_range(
+    session: AsyncSession, user: User, date_from: str, date_to: str
+) -> list[Plan]:
+    try:
+        df = date.fromisoformat(date_from)
+        dt = date.fromisoformat(date_to)
+    except Exception:
+        return []
+    result = await session.execute(
+        select(Plan).where(
+            and_(
+                Plan.user_id == user.id,
+                Plan.plan_date >= df,
+                Plan.plan_date <= dt,
+            )
+        ).order_by(Plan.plan_date, Plan.scheduled_time)
+    )
+    return result.scalars().all()
+
+
 async def get_pending_plans_to_notify(session: AsyncSession) -> list[Plan]:
     """Vaqti kelgan va hali notification yuborilmagan rejalarni qaytaradi"""
     now_tashkent = datetime.now(TIMEZONE)
