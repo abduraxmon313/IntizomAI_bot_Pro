@@ -282,6 +282,39 @@ body::after{width:320px;height:320px;bottom:60px;left:-120px;background:var(--gr
 .mt-16{margin-top:16px}
 .hidden{display:none !important}
 ::-webkit-scrollbar{width:0;height:0}
+
+.diary-page.selected:not(.today){border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft),var(--glow);transform:translateY(-2px)}
+.diary-sunday.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft),var(--glow);transform:translateY(-2px)}
+.diary-page,.diary-sunday{will-change:transform,box-shadow}
+@keyframes selectPulse{0%{box-shadow:0 0 0 0 var(--primary-soft)}70%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.diary-page.selected:not(.today),.diary-sunday.selected{animation:selectPulse .6s ease-out}
+.year-chip,.month-cell,.wd,.stat-card,.ach,.theme-tile,.ai-feat,.mini-stat,.setting{will-change:transform}
+.year-chip,.month-cell,.wd,.stat-card,.ach,.theme-tile,.ai-feat,.mini-stat{transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s ease,border-color .25s ease}
+.month-cell:hover,.year-chip:hover,.stat-card:hover,.ach:hover,.theme-tile:hover,.ai-feat:hover,.mini-stat:hover,.setting:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.hero-left .val{background:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.7) 50%,#fff 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 4s ease-in-out infinite}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.mini-stat,.stat-card,.chart-card,.ach,.ai-feat{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both}
+.mini-stat:nth-child(1){animation-delay:.05s}.mini-stat:nth-child(2){animation-delay:.12s}.mini-stat:nth-child(3){animation-delay:.19s}
+.stat-card:nth-child(1){animation-delay:.05s}.stat-card:nth-child(2){animation-delay:.12s}.stat-card:nth-child(3){animation-delay:.19s}.stat-card:nth-child(4){animation-delay:.26s}
+.ai-feat:nth-child(1){animation-delay:.08s}.ai-feat:nth-child(2){animation-delay:.16s}.ai-feat:nth-child(3){animation-delay:.24s}.ai-feat:nth-child(4){animation-delay:.32s}
+@keyframes chipIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.year-chip{animation:chipIn .4s ease both}
+.year-chip:nth-child(1){animation-delay:.05s}.year-chip:nth-child(2){animation-delay:.1s}.year-chip:nth-child(3){animation-delay:.15s}.year-chip:nth-child(4){animation-delay:.2s}.year-chip:nth-child(5){animation-delay:.25s}.year-chip:nth-child(6){animation-delay:.3s}.year-chip:nth-child(7){animation-delay:.35s}
+@keyframes cellIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.month-cell,.wd,.cal-day:not(.empty){animation:cellIn .35s cubic-bezier(.34,1.56,.64,1) both}
+.month-cell:nth-child(n){animation-delay:calc(var(--i,0) * 30ms)}
+@keyframes glowPulse{0%,100%{box-shadow:var(--glow)}50%{box-shadow:0 14px 36px var(--primary-soft),0 0 0 8px var(--primary-soft)}}
+.add-btn{animation:glowPulse 3s ease-in-out infinite}
+.add-btn:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(0,0,0,.22),var(--glow)}
+@keyframes heroIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.hero,.ai-hero,.prof-hero,.week-banner{animation:heroIn .55s cubic-bezier(.22,1,.36,1) both}
+@keyframes barPop{0%{transform:scaleY(0);transform-origin:bottom}60%{transform:scaleY(1.05);transform-origin:bottom}100%{transform:scaleY(1);transform-origin:bottom}}
+.bar{animation:barPop .8s cubic-bezier(.34,1.56,.64,1) both}
+.nav-item:hover{background:var(--primary-soft);color:var(--primary)}
+.toggle{transition:background .35s ease}
+.toggle i{transition:left .35s cubic-bezier(.68,-.55,.27,1.55),background .3s}
+.cbx{transition:all .3s cubic-bezier(.34,1.56,.64,1)}
 </style>
 </head>
 <body>
@@ -310,7 +343,7 @@ body::after{width:320px;height:320px;bottom:60px;left:-120px;background:var(--gr
 
 <div class="goal-view hidden" id="gvMonthly">
   <div class="months-grid" id="monthsGrid"></div>
-  <button class="add-btn ripple add-goal-trigger" data-gp="monthly" type="button" aria-label="Maqsad qo'shish"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Maqsad qo'shish</span></button>
+  <button class="add-btn ripple add-goal-trigger" data-gp="monthly" type="button" style="margin-top:12px" aria-label="Maqsad qo'shish"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Maqsad qo'shish</span></button>
   <div id="monthlyList" class="mt-16"></div>
 </div>
 
@@ -465,7 +498,7 @@ function renderWeekly(){const base=addDays(new Date(),State.weekOffset*7);const 
 
 function renderDaily(){document.getElementById('dvWeek').classList.toggle('hidden',State.dailyView!=='week');document.getElementById('dvMonth').classList.toggle('hidden',State.dailyView!=='month');const items=document.querySelectorAll('#dvToggle .dv-toggle-item');const ind=document.getElementById('dvInd');const ai=State.dailyView==='week'?0:1;items.forEach((it,i)=>it.classList.toggle('active',i===ai));setTimeout(()=>{const w=items[ai].offsetWidth,x=items[ai].offsetLeft;ind.style.left=x+'px';ind.style.width=w+'px';},10);if(State.dailyView==='week')renderDiary();else renderCalendar();renderDailyList();}
 
-function renderDiary(){if(!State.diaryWeekStart)State.diaryWeekStart=startOfWeek(new Date());const s=State.diaryWeekStart;const e=addDays(s,6);document.getElementById('diaryRange').textContent=formatRange(s,e);const tod=ymd(new Date());const cell=i=>{const d=addDays(s,i);const k=ymd(d);const gs=goalsBy('daily',k);const it=k===tod;const gh=gs.length?`<div class="dgoals">${gs.slice(0,3).map(g=>`<div class="g">${esc(g.title)}</div>`).join('')}${gs.length>3?`<div class="g">+${gs.length-3} ko\'proq</div>`:''}</div>`:`<div class="empty">Maqsad qo\'shing</div>`;return `<div class="diary-page ${it?'today':''} ${(i%2===0)?'right':'left'}" data-day="${k}"><div class="dh"><span class="dn">${UZ_DOW_SHORT[i]}</span><span class="dd">${d.getDate()}</span></div>${gh}</div>`;};document.getElementById('diaryGrid').innerHTML=[0,1,2,3,4,5].map(cell).join('');const sun=addDays(s,6);const sk=ymd(sun);const sg=goalsBy('daily',sk);const ist=sk===tod;document.getElementById('diarySunday').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:13px;color:var(--text-2);font-weight:700">${UZ_DOW_FULL[6]} ${ist?'(Bugun)':''}</span><span style="font-size:18px;font-weight:800;color:var(--primary)">${sun.getDate()}</span></div>${sg.length?`<div style="font-size:12px;color:var(--text-2)">${sg.slice(0,3).map(g=>`<div style="display:flex;gap:6px;margin-bottom:3px"><span style="color:var(--primary);font-weight:700">•</span>${esc(g.title)}</div>`).join('')}${sg.length>3?`<div style="color:var(--text-3);margin-top:2px">+${sg.length-3} ko\'proq</div>`:''}</div>`:`<div style="font-size:12px;color:var(--text-3);font-style:italic">Yakshanba uchun maqsad qo\'shing</div>`}`;document.getElementById('diarySunday').dataset.day=sk;document.querySelectorAll('.diary-page, .diary-sunday').forEach(p=>p.onclick=()=>{State.selectedDate=new Date(p.dataset.day+'T00:00:00');renderDailyList();});}
+function renderDiary(){if(!State.diaryWeekStart)State.diaryWeekStart=startOfWeek(new Date());const s=State.diaryWeekStart;const e=addDays(s,6);document.getElementById('diaryRange').textContent=formatRange(s,e);const tod=ymd(new Date());const cell=i=>{const d=addDays(s,i);const k=ymd(d);const gs=goalsBy('daily',k);const it=k===tod;const gh=gs.length?`<div class="dgoals">${gs.slice(0,3).map(g=>`<div class="g">${esc(g.title)}</div>`).join('')}${gs.length>3?`<div class="g">+${gs.length-3} ko\'proq</div>`:''}</div>`:`<div class="empty">Maqsad qo\'shing</div>`;const isSel=k===ymd(State.selectedDate);return `<div class="diary-page ${it?'today':''} ${isSel?'selected':''} ${(i%2===0)?'right':'left'}" data-day="${k}"><div class="dh"><span class="dn">${UZ_DOW_SHORT[i]}</span><span class="dd">${d.getDate()}</span></div>${gh}</div>`;};document.getElementById('diaryGrid').innerHTML=[0,1,2,3,4,5].map(cell).join('');const sun=addDays(s,6);const sk=ymd(sun);const sg=goalsBy('daily',sk);const ist=sk===tod;document.getElementById('diarySunday').classList.toggle('selected',sk===ymd(State.selectedDate)&&sk!==tod);document.getElementById('diarySunday').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:13px;color:var(--text-2);font-weight:700">${UZ_DOW_FULL[6]} ${ist?'(Bugun)':''}</span><span style="font-size:18px;font-weight:800;color:var(--primary)">${sun.getDate()}</span></div>${sg.length?`<div style="font-size:12px;color:var(--text-2)">${sg.slice(0,3).map(g=>`<div style="display:flex;gap:6px;margin-bottom:3px"><span style="color:var(--primary);font-weight:700">•</span>${esc(g.title)}</div>`).join('')}${sg.length>3?`<div style="color:var(--text-3);margin-top:2px">+${sg.length-3} ko\'proq</div>`:''}</div>`:`<div style="font-size:12px;color:var(--text-3);font-style:italic">Yakshanba uchun maqsad qo\'shing</div>`}`;document.getElementById('diarySunday').dataset.day=sk;document.querySelectorAll('.diary-page, .diary-sunday').forEach(p=>p.onclick=()=>{State.selectedDate=new Date(p.dataset.day+'T00:00:00');renderDiary();renderDailyList();});}
 
 function renderCalendar(){const cm=State.calMonth;const y=cm.getFullYear(),m=cm.getMonth();document.getElementById('calTitle').textContent=UZ_MONTHS[m]+' '+y;const first=new Date(y,m,1);const fdow=(first.getDay()+6)%7;const dim=new Date(y,m+1,0).getDate();const tod=ymd(new Date());const sel=ymd(State.selectedDate);let cells='';for(let i=0;i<fdow;i++)cells+=`<div class="cal-day empty"></div>`;for(let d=1;d<=dim;d++){const dt=new Date(y,m,d);const k=ymd(dt);const gs=goalsBy('daily',k);const it=k===tod;const isSel=k===sel;const he=gs.length>0;const max=2;const evs=gs.slice(0,max).map((g,i)=>`<div class="ev c${(i%3)+1}" title="${esc(g.title)}">${esc(g.title)}</div>`).join('');const more=gs.length>max?`<div class="more">+${gs.length-max} more</div>`:'';cells+=`<div class="cal-day ${it?'today':''} ${isSel?'selected':''} ${he?'has-events':''}" data-day="${k}"><div class="dn">${d}</div><div class="events">${evs}${more}</div></div>`;}document.getElementById('calGrid').innerHTML=cells;document.querySelectorAll('.cal-day:not(.empty)').forEach(c=>c.onclick=()=>{const k=c.dataset.day;State.selectedDate=new Date(k+'T00:00:00');renderCalendar();renderDailyList();});}
 
